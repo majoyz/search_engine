@@ -14,18 +14,18 @@
 PageLibPreprocessor::PageLibPreprocessor(Configuration & conf)
 :_conf(conf)
 {}
-//
+
 void PageLibPreprocessor::doProcess(){
     readInfoFromFile();
-    //time_t time1 = time(NULL);
+    time_t time1 = time(NULL);
     cutRedundantPages();
-/*    buildInvertIndexTable();
+    buildInvertIndexTable();
     time_t time2 = time(NULL);
-    std::cout<<"build invert index table, processtime: "<<(time1-time2)<<"seconds\n";
+    std::cout<<"build invert index table, processtime: "<<(time2-time1)<<"seconds\n";
     storeOnDisk();
     time_t time3 = time(NULL);
     std::cout<<"save newpaglib on disk, processtime: "<<(time3-time2)<<"seconds\n";
-*/}
+}
 
 void PageLibPreprocessor::readInfoFromFile(){
 	ifstream ifspl(_conf.getConfigMap()["myripepagelib"]);
@@ -122,6 +122,9 @@ void PageLibPreprocessor::buildInvertIndexTable(){
 	}
 }
 
+#endif
+#if 1
+
 void PageLibPreprocessor::storeOnDisk(){
 	ofstream of1(_conf.getConfigMap()["mynewripepagelib"]);
 	ofstream of2(_conf.getConfigMap()["mynewoffsetlib"]);
@@ -147,5 +150,68 @@ void PageLibPreprocessor::storeOnDisk(){
 		of3 << endl;
 	}
 	of3.close();
+}
+#endif
+#if 1
+void PageLibPreprocessor::buildInvertIndexTable()
+{
+    //获取词频表，建立索引表内容为<单词,<docid,词频>>
+    for(size_t idx = 0; idx < _pageLib.size(); ++idx)
+    {
+        map<string,int> wordfreqmap = _pageLib[idx].getWordMap();
+        for(auto & it:wordfreqmap)
+        {
+            _invertIndexTable[it.first].push_back(make_pair(_pageLib[idx].getDocId(),it.second));
+        }
+    }
+    //获取单词出现文章数目DF，计算权重weight
+    int n = _pageLib.size();
+    //统计文章权重weightsum <docid，weightsum>
+    map<int,double> weightsum;
+    for(auto & it:_invertIndexTable)
+    {
+        int df = it.second.size();
+        for(auto & wordfreq:it.second)
+        {
+            double idf = (log(n)-log(df+1))/log(2);
+            double weight =  idf*wordfreq.second;
+            wordfreq.second = weight;
+            weightsum[wordfreq.first] += weight;
+        }
+    }
+    //归一化处理
+    for(auto & it:_invertIndexTable)
+    {
+        for(auto & wordweight:it.second)
+        {
+//	    std::cout<<it.first<<"\tin\t"<<wordweight.first<<":" <<weightsum[wordweight.first] <<"\n";	    
+	    wordweight.second /= weightsum[wordweight.first];
+        }
+    }
+}
+#endif
+#if 0
+void PageLibPreprocessor::storeOnDisk()
+{
+    sort(_pageLib.begin(),_pageLib.end());
+    map<string,string> pagetemp = _conf.getConfigMap();
+    std::ofstream ofspl(pagetemp["NewPageLib"]);
+    std::ofstream ofsos(pagetemp["NewOffsetLib"]);
+    if(!ofspl.good() || !ofsos.good())
+    {
+        std::cout<<"err open file\n";
+        return;
+    }
+    vector<WebPage>::iterator it = _pageLib.begin();
+    while(it != _pageLib.end())
+    {
+       string doc = it->WebPage::getDoc();
+       int len = doc.size();
+       int docid = it->WebPage::getDocId();
+       unsigned long offset = ofspl.tellp();
+       ofsos << docid << '\t' << offset << '\t' << len<< '\n';
+       ofspl<<doc;
+       ++it;
+    }
 }
 #endif

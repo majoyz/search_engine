@@ -51,7 +51,7 @@ bool operator==(WebPage & lhs,WebPage & rhs){
     int lhsnum = lhs._topWords.size();
     int rhsnum = rhs._topWords.size();
     int totalnum = lhsnum>rhsnum?lhsnum:rhsnum;
-    if((double)(commNum/totalnum) > 0.75)
+    if((double)((double)commNum/(double)totalnum) > 0.75)
     {
         return 1;
     }
